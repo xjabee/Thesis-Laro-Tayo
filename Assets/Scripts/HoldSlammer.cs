@@ -10,6 +10,7 @@ public class HoldSlammer : MonoBehaviour
     public GameObject slammerPiece;
     // public Text powerIndicator;
     public GameObject highlighter;
+    public GameObject powerBar;
     public Slider slider;
     [SerializeField] private float maxPowerBarValue = 100;
     public float currentPowerBarValue;
@@ -18,6 +19,9 @@ public class HoldSlammer : MonoBehaviour
     public bool isIncreasing;
     public bool isShooting;
     public bool isPositioning;
+    bool fired = false;
+    public bool pause;
+    bool canShoot = true;
     bool shootReady;
     int counter;
     public GameObject[] respawns;
@@ -31,9 +35,20 @@ public class HoldSlammer : MonoBehaviour
         isPositioning = true;
         isShooting = false;
         shootReady = false;
+        pause = true;
         StartCoroutine(UpdateBar());
     }
+
     void Update()
+    {
+
+        if (!pause)
+        {
+            Inputs();
+        }
+
+    }
+    private void Inputs()
     {
         if (isPositioning)   // pog Movement
         {
@@ -49,8 +64,7 @@ public class HoldSlammer : MonoBehaviour
         }
         // powerIndicator.text = $"Power: {currentPowerBarValue.ToString("F0")}";
         slider.value = currentPowerBarValue / maxPowerBarValue; // just change value of the power
-        Debug.Log(isShooting);
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && canShoot)
         {
             isShooting = true;
             counter++;  // just to keep the coroutine from not going over and over again
@@ -61,12 +75,15 @@ public class HoldSlammer : MonoBehaviour
                 highlighter.SetActive(true);
             }
         }
-        if (Input.GetKeyUp(KeyCode.Space))
+        if (Input.GetKeyUp(KeyCode.Space) && canShoot)
         {
             isShooting = false;
             Debug.Log("hello");
-            StartCoroutine(launchPog());
+            powerBar.SetActive(false);
+            fired = true;
             counter = 0;
+            canShoot = false;
+            pause = true;
         }
         if (Input.GetKeyDown(KeyCode.C))
         {
@@ -82,6 +99,15 @@ public class HoldSlammer : MonoBehaviour
             currentPowerBarValue++;
     }
 
+    void FixedUpdate()
+    {
+        if (fired)
+        {
+            StartCoroutine(launchPog());
+            fired = false;
+        }
+    }
+
     IEnumerator launchPog()
     {
         float _currentPowerBarValue = currentPowerBarValue;
@@ -92,6 +118,8 @@ public class HoldSlammer : MonoBehaviour
         currentPowerBarValue = 0; // resets bar so it would look like it byebye
         yield return new WaitForSeconds(4f);
         PogRespawn();
+        canShoot = true;
+        pause = false;
 
     }
 
@@ -99,6 +127,7 @@ public class HoldSlammer : MonoBehaviour
     {
         while (isShooting)
         {
+            powerBar.SetActive(true);
             float fill = currentPowerBarValue / maxPowerBarValue;
             PowerBarMask.fillAmount = fill;
             if (!isIncreasing)
@@ -120,11 +149,6 @@ public class HoldSlammer : MonoBehaviour
             yield return new WaitForSeconds(frequency);
         }
         yield return null;
-    }
-
-    void ResetBar()
-    {
-        highlighter.SetActive(true);
     }
     void LaunchVoid(float power)
     {
@@ -158,6 +182,12 @@ public class HoldSlammer : MonoBehaviour
         Debug.Log("hi2");
         yield return new WaitForSeconds(0.5f);
 
+    }
+
+
+    public void StartGame()
+    {
+        pause = false;
     }
 
 

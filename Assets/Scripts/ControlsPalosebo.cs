@@ -1,16 +1,25 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+
+public enum PlayerNumber { Player1, Player2, Player3, Player4 };
 
 public class ControlsPalosebo : MonoBehaviour
 {
+    public enum PlayerControls { A_S, K_L };
+    public PlayerControls playerControls;
+
+    public PlayerNumber playerNumber;
+
+
     public MeshRenderer kawayan;
     public Animator anim;
     public Rigidbody rb;
 
     public float jumpForce = 7;
-    public float harderJumpForce = 5 ;
-    public float hardestJumpForce = 3;
+    public float harderJumpForce = 6;
+    public float hardestJumpForce = 5;
     private float defaultJumpForce;
 
     public bool pressedJump = false;
@@ -24,20 +33,31 @@ public class ControlsPalosebo : MonoBehaviour
 
     public float heightPerc1 = 50;
     public float heightPerc2 = 80;
-    [SerializeField]private float heightCheck1;
-    [SerializeField]private float heightCheck2;
+    [SerializeField] private float heightCheck1;
+    [SerializeField] private float heightCheck2;
+
+    private bool finished = false;
+
+    [SerializeField] private PaloseboManagement manager;
+
+
+
+
+
 
     // Start is called before the first frame update
     void Start()
     {
+
+
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
 
         defaultJumpForce = jumpForce;
 
         //getting a percentage of the kawayan's height to be used as checkpoints for changing difficulty
-        heightCheck1 = Mathf.Lerp(0, kawayan.bounds.size.y, heightPerc1/100); 
-        heightCheck2 = Mathf.Lerp(0, kawayan.bounds.size.y, heightPerc2/100);
+        heightCheck1 = Mathf.Lerp(0, kawayan.bounds.size.y, heightPerc1 / 100);
+        heightCheck2 = Mathf.Lerp(0, kawayan.bounds.size.y, heightPerc2 / 100);
     }
 
 
@@ -49,22 +69,38 @@ public class ControlsPalosebo : MonoBehaviour
      * 
      * 
      */
+    // medyo jank pa tong controls management
+
+
 
     // Update is called once per frame
     void Update()
     {
-        if ( jumpCount == 0 && Input.GetKeyDown(KeyCode.Space) ) //climbing
+        if (!finished && !manager.pause)
         {
-            holdingOn = false;
-            pressedJump = true;
-            rb.isKinematic = false;
-            holdingOn = false;
-            jumpCount = 1;
-            anim.enabled = true;
-            anim.SetBool("isClimbing", true);
+            PaloseboMainControls();
         }
 
-        if ( Input.GetKeyDown(KeyCode.M) ) //holding on 
+        HeightChecking();
+    }
+
+    private void PaloseboMainControls()
+    {
+        if (jumpCount == 0) //climbing
+        {
+            if ((playerControls == PlayerControls.A_S && Input.GetKeyDown(KeyCode.A)) || (playerControls == PlayerControls.K_L && Input.GetKeyDown(KeyCode.K)))
+            {
+                holdingOn = false;
+                pressedJump = true;
+                rb.isKinematic = false;
+                holdingOn = false;
+                jumpCount = 1;
+                anim.enabled = true;
+                anim.SetBool("isClimbing", true);
+            }
+        }
+
+        if ((playerControls == PlayerControls.A_S && Input.GetKeyDown(KeyCode.S)) || (playerControls == PlayerControls.K_L && Input.GetKeyDown(KeyCode.L)))
         {
             holdingOn = true;
             rb.isKinematic = true;
@@ -73,7 +109,8 @@ public class ControlsPalosebo : MonoBehaviour
             holdCount = 0;
         }
 
-        if ( holdingOn )
+
+        if (holdingOn)
         {
             holdCount += Time.deltaTime;
             if (holdCount > maxHoldTime)
@@ -82,27 +119,25 @@ public class ControlsPalosebo : MonoBehaviour
                 Debug.Log("hold count is longer than max hold");
             }
         }
-
-        HeightChecking();
     }
 
     private void HeightChecking() //check height of player, higher player weaker jump
     {
-        if ( transform.position.y >= heightCheck1 )
+        if (transform.position.y >= heightCheck1)
         {
             jumpForce = harderJumpForce;
 
-            if ( transform.position.y >= heightCheck2 )
+            if (transform.position.y >= heightCheck2)
             {
                 jumpForce = hardestJumpForce;
             }
         }
 
-        if ( transform.position.y <= heightCheck2 )
+        if (transform.position.y <= heightCheck2)
         {
             jumpForce = harderJumpForce;
 
-            if ( transform.position.y <= heightCheck1 )
+            if (transform.position.y <= heightCheck1)
             {
                 jumpForce = defaultJumpForce;
             }
@@ -113,9 +148,9 @@ public class ControlsPalosebo : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if ( pressedJump )
+        if (pressedJump)
         {
-            rb.AddForce(Vector3.up*jumpForce, ForceMode.Impulse);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             pressedJump = false;
             justJumped = true;
             anim.SetBool("isClimbing", false);
@@ -130,6 +165,7 @@ public class ControlsPalosebo : MonoBehaviour
         }
     }
 
+
     private void OnTriggerEnter(Collider c)
     {
         if (c.transform.tag == "goal")
@@ -138,6 +174,12 @@ public class ControlsPalosebo : MonoBehaviour
             Debug.Log("Goal");
             rb.isKinematic = true;
             anim.enabled = false;
+
+            c.gameObject.SetActive(false);
+
+            manager.AddToFinished(playerNumber);
+            finished = true;
+
         }
     }
 
